@@ -1,0 +1,49 @@
+                   uCOS, The Real Time Kernel
+
+By  : Jean J. Labrosse
+Date: May 11, 1992
+
+
+     For your convenience, I have combined the code for both  the 
+May  1992  and June 1992 issues of  Embedded  System  Programming 
+Magazine.   The  code  assumes that you  are  using  the  Borland 
+International C++ Version 3.0.  
+
+     To  compile  the  two  test  cases, you  would start the IDE
+(Integrated  Development  Environment)  and open  either  project
+TEST1.PRJ  or  project TEST2.PRJ.  However, before  you  compile, 
+you  need  to  create  an  OBJ  subdirectory  from  your  current 
+directory.  Also,  my Borland  compiler  is located in the C:\CPP 
+directory.  If  your  compiler is in a  different  directory, you 
+will need to edit the  DIRECTORY  entries  IDE.  To  compile  the 
+code, simply press the F9 key.   Code generation  assumes maximum 
+speed optimization.
+
+     I have included TEST1.EXE and TEST2.EXE which allows you  to 
+run the examples directly.
+
+     I am currently working on a book version of uCOS.  The  book 
+will  describe  the internal working of this  kernel  in  greater 
+detail.  The magazine article version had few comments because of 
+a 55 character limit imposed by most magazines.  The code in  the 
+book  version will be fully commented.  I also made a  number  of 
+changes to the structure:
+
+     - uCOS is now easier to setup
+     - The code was optimized
+     - Interrupts are disabled for less than 400 bus cycles
+     - A task can now delete another task (or itself)
+     - A task can change another task's priority
+     - uCOS now provides a real time clock
+     - OSTimeTick() is faster (11000 vs 15000 bus cycles max.)
+
+     The  book  is schedule to be available this  fall  from  R&D 
+Publications; the publisher of "The C Users Journal" and will  be 
+advertised in this magazine.
+
+     I  would like to thank Mr Tyler Sperry of  Embedded  Systems 
+Programming  Magazine for  publishing uCOS.  I hope you will find
+it useful.
+
+
+     Jean J. Labrosse

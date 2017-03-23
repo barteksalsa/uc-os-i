@@ -1,0 +1,157 @@
+*
+* file: README - 14th October 1994
+*
+* uC/OS for the Alpha processor, by David A Rusling 
+*	(david.rusling@reo.mts.dec.com).
+*
+INTRODUCTION
+
+This directory contains the uC/OS kernel for the Alpha processor.
+uC/OS is a real-time kernel that was written by Jean J. Labrosse for the x86
+processor and published on the "Embedded Systems Programming" 
+magazine in 1992.  For more information about uC/OS I recommend the book by 
+Jean J. Labrosse "uC/OS The Real-Time Kernel" distributed by Prentice Hall, 
+ISBN 0-13-031352-1.
+
+The following files are provided:
+
+Makefile	OSF makefile
+app.c		A test application that starts a few threads.
+read.me		The original readme file that was supplied with the 
+		base uC/OS kit.
+ucos.c		The OS itself
+README		This file
+eb.c		Evaluation board specific C code
+includes.h	include files
+support.s	Evaluation board specific assembler code.
+ucos.h		OS specific include file
+
+To use this version of uC/OS you will need a copy of the Evaluation
+Board software provided by Digital Equipment Corporation. 
+
+INSTALLATION
+
+This set of files belongs as a "new" directory in the EBFW 
+(Alpha Evaluation Board Firmware) development tree.  You need
+to have that software installed before you break open this kit
+into it.  That will give you a top level directory "ebfw" with a number
+of lower level directories such as "lib" and "rom".  Build the evaluation
+board software for whatever board you wish to run uC/OS on using the 
+instructions provided in /ebfw/README.
+
+Then unpackage the uC/OS for Alpha software into /ebfw/ucos.
+
+BUILDING
+
+You now have a directory called ucos (ebfw/ucos).  CD to
+that directory and build the image.
+
+> make
+
+This will build an image in the object area for the evaluation
+board that is your current default (/ebfw/obj/ebxx).  The image
+is called "ucos.nh" (nh = no header) which is a stripped image 
+containing only executable code and data without any image header
+information.
+
+RUNNING THE IMAGES
+
+There are many ways of loading an image onto an Alpha Evaluation
+Board.   Read the manual to find out how to do this.   However,
+say the image is on a floppy.   You power on the Alpha Evaluation
+Board and set the boot address to 0x200000 (you'll notice that this
+is the address that the image has been linked to in Makefile).
+
+> bootadr 200000
+
+And then load the image starting at this location:
+
+> flload ucos.nh
+
+Now execute it by typing:
+
+> go
+
+RESTRICTIONS
+
+The software is not particularly efficiently written and has not 
+been compiled with optimisation turned on.
+
+A BRIEF DESCRIPTION
+
+The main files ucos.c and ucos.h have been altered as little as 
+possible.   The only notable changes being the removal of "far"
+as a valid routine/variable attribute.
+
+eb.c contains the main() routine and it is this which performs
+the neccessary system initialization and then calls OSStart() to
+start uC/OS itself.   I have divided the application code out into
+app.c and that means that main() must call appmain() after it has
+initialized the OS (via OSInit()) and before it has started it.
+
+All OS critical code is bracketed with a call to an implementation
+specific pair of routines OS_ENTER_CRITICAL() and OS_EXIT_CRITICAL().
+These are defined to be OSEnterCritical() and OSExitCritical() in
+eb.c.  These work by raising the IPL of the system to its maximum (7)
+and thus disallowing any interrupts.  As OS critical code can be called 
+during interrupt processing and interrupts can occur at a variety of
+IPLs (and thus be themselves interrupted) it is vital that 
+OSExitCritical() does not merely lower the IPL to its lowest value
+but the IPL at which OSEnterCritical() was called.   For this 
+reason, a stack of saved IPLs is used.
+
+support.s contains all of the assembler code and you should note that
+this is written to the interface provided by the OSF PALcode interface
+as described in the Alpha Hardware Reference Manual. 
+
+Threads are initialized so that they each have their own stack and
+each has an area where its registers may be saved.  Each register is 64
+bits in size and there are 32 integer registers, 32 floating point
+registers plus the PC and PS (process status) registers to save.  Each
+thread is initialized to start at IPL 0 and all threads are kernel 
+threads; that is, they and the OS itself share one stack pointer.
+
+Each thread is started by calling OSLoadThread() in support.s and all
+this does is to load all of the thread's initial register values 
+(actually, only the PC and a0 (r16) are of interest) and then calls
+the thread's entry routine.  Thereafter, there are two ways that that 
+thread can be swapped out and another thread swapped in and executed.
+The first is because that thread makes a system call that results in it
+being made to wait (eg OSSemPend()) and the second is where an interrupt
+occurs and during processing of that interrupt it is discovered that another
+thread of greater priority needs to run.
+
+Swapping the running threads in the first case (via OSSched()) is the easier
+case.  We save all of the registers of the old thread in its saved context
+space (pointed at by the first quadword of the TCB pointed at by OSTCBCur).
+Then we read and save the current IPL and finally we make point the PC at
+the end of the current routine (OSTaskSwap()).   Then we load the new
+thread's registers and build a stack frame on its stack in which we save
+the PS, PC, GP and a0-a2.   The PC is the next instruction to be executed by
+the thread.   Then we make a return from interrupt PALcode call and it is
+this PALcode that swaps to the new thread that we wish to execute.  Note that
+this is the only way that we can do this as we have no registers available
+to load the PC into.
+
+Swapping the running threads during interrupt processing is a little more
+complicated.   OSExitISR() in ucos.c is called at the end of interrupt processing
+and may discover that a higher priority thread should execute.  It calls 
+OSIntCtxSwp().   At that point, however, we do not know just how much stack
+has been consumed since the interrupt handling PALcode put an interrupt stack
+frame on it and so we cannot easily unwind the stack.   So, we set a flag indicating
+that the interrupt code should swap context and the interrupt code looks at
+that flag after the C interrupt handling code has returned.  At that point
+we can swap context relatively easily.  The current thread's registers are
+saved (including the ones on the interrupt stack frame) and the new thread's
+registers are loaded.  Then a new interrupt stack frame is built and the new
+thread's details entered.   Then (as before) we make a return from interrupt
+PALcode call and the PALcode swaps to the new thread's context.
+
+A better (and more complicated) scheme would be for the threads to run in
+process context which gives each of them their own user stack with interrupts
+being handled on the kernel stack pointer.   A swap context PAL call can
+swap between them.  In this case each could have its own page tables and you
+could even have protection between the many threads running.   Maybe I'll look
+at this.
+
+
