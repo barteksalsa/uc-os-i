@@ -1,7 +1,7 @@
 # uC/OS version 1
 
 This is the code I got from the original article describing uC/OS published in 1992.
-On the one hand I know it has bugs, on the other hand it is free to use (see the licence).
+On the one hand I know it has bugs, on the other hand it is free to use (see the licence). Enjoy. :-)
 
 More information about the OS is in [the wiki](https://en.wikipedia.org/wiki/Micro-Controller_Operating_Systems#Writing_applications_under_.CE.BCC.2FOS)
 
